@@ -282,16 +282,17 @@ def get_init_cell(batch_size, rnn_size):
     :return: Tuple (cell, initialize state)
     """
     num_layers = 3
+    keep_prob = 0.5
     
     def build_cell():
-        return tf.contrib.rnn.BasicLSTMCell(rnn_size)
+        cl = tf.contrib.rnn.BasicLSTMCell(rnn_size)
+        return tf.contrib.rnn.DropoutWrapper(cl, output_keep_prob=keep_prob)
         
-    cell = tf.contrib.rnn.MultiRNNCell([build_cell() for _ in range(num_layers)])
+    cell = tf.contrib.rnn.MultiRNNCell([build_cell()] * num_layers)
     
-    initial_state = cell.zero_state(batch_size, tf.int32)
+    initial_state = cell.zero_state(batch_size, tf.int32)    
     
-    
-    return (cell, tf.identity(initial_state, "initial_state"))
+    return cell, tf.identity(initial_state, "initial_state")
 
 
 """
@@ -300,6 +301,7 @@ DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
 tests.test_get_init_cell(get_init_cell)
 ```
 
+    (LSTMStateTuple(c=<tf.Tensor 'MultiRNNCellZeroState/DropoutWrapperZeroState/BasicLSTMCellZeroState/zeros:0' shape=(?, 256) dtype=int32>, h=<tf.Tensor 'MultiRNNCellZeroState/DropoutWrapperZeroState/BasicLSTMCellZeroState/zeros_1:0' shape=(?, 256) dtype=int32>), LSTMStateTuple(c=<tf.Tensor 'MultiRNNCellZeroState/DropoutWrapperZeroState_1/BasicLSTMCellZeroState/zeros:0' shape=(?, 256) dtype=int32>, h=<tf.Tensor 'MultiRNNCellZeroState/DropoutWrapperZeroState_1/BasicLSTMCellZeroState/zeros_1:0' shape=(?, 256) dtype=int32>), LSTMStateTuple(c=<tf.Tensor 'MultiRNNCellZeroState/DropoutWrapperZeroState_2/BasicLSTMCellZeroState/zeros:0' shape=(?, 256) dtype=int32>, h=<tf.Tensor 'MultiRNNCellZeroState/DropoutWrapperZeroState_2/BasicLSTMCellZeroState/zeros_1:0' shape=(?, 256) dtype=int32>))
     Tests Passed
     
 
@@ -308,6 +310,8 @@ Apply embedding to `input_data` using TensorFlow.  Return the embedded sequence.
 
 
 ```python
+import sys
+
 def get_embed(input_data, vocab_size, embed_dim):
     """
     Create embedding for <input_data>.
@@ -316,10 +320,9 @@ def get_embed(input_data, vocab_size, embed_dim):
     :param embed_dim: Number of embedding dimensions
     :return: Embedded input.
     """
+    embedding = tf.Variable(tf.random_uniform((vocab_size, embed_dim), -1, 1, dtype = tf.int32))
+    embed = tf.nn.embedding_lookup(embedding, input_data)
 
-    embedding = tf.Variable(tf.random_uniform((vocab_size, embed_dim), -1, 1))
-    embed = tf.nn.embedding_lookup(tf.dtypes.cast(embedding, tf.int32), input_data)
-    
     return embed
 
 
@@ -348,22 +351,15 @@ def build_rnn(cell, inputs):
     :param inputs: Input text data
     :return: Tuple (Outputs, Final State)
     """
-    print(batch_size)
-    print(rnn_size)
-    print(inputs)
-    print(len(int_to_vocab))
-    print(embed_dim)
+    inputs = tf.cast(inputs, tf.int32)
+
+    cell_, initial_state_ = get_init_cell(batch_size, rnn_size)
+
+    embed_ = get_embed(inputs, len(int_to_vocab), embed_dim)
     
+    outputs, final_state = tf.nn.dynamic_rnn(cell_, embed_, initial_state=initial_state_)
     
-    r_cell, init_state = get_init_cell(batch_size, rnn_size)
-    r_embed = get_embed(inputs, len(int_to_vocab), embed_dim)
-    
-    print(r_cell)
-    print(r_embed)
-    
-    outputs, final_state = tf.nn.dynamic_rnn(r_cell, r_embed, initial_state=init_state)
-    
-    return (outputs, tf.identity(final_state, "final_state"))
+    return outputs, tf.identity(final_state, "final_state")
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
@@ -371,36 +367,18 @@ DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
 tests.test_build_rnn(build_rnn)
 ```
 
-    100
-    512
-    Tensor("Placeholder:0", shape=(?, ?, 256), dtype=float32)
-    6780
-    500
+    <tensorflow.python.ops.rnn_cell_impl.MultiRNNCell object at 0x000001B1FF6011D0>
     
 
 
     ---------------------------------------------------------------------------
 
-    AttributeError                            Traceback (most recent call last)
+    ValueError                                Traceback (most recent call last)
 
-    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\array_ops.py in gather(***failed resolving arguments***)
-       3472     # introducing a circular dependency.
-    -> 3473     return params.sparse_read(indices, name=name)
-       3474   except AttributeError:
-    
-
-    AttributeError: 'Tensor' object has no attribute 'sparse_read'
-
-    
-    During handling of the above exception, another exception occurred:
-    
-
-    TypeError                                 Traceback (most recent call last)
-
-    <ipython-input-182-c426d71ed819> in <module>
-         26 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
-         27 """
-    ---> 28 tests.test_build_rnn(build_rnn)
+    <ipython-input-53-b461eeaa0ed3> in <module>
+         19 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
+         20 """
+    ---> 21 tests.test_build_rnn(build_rnn)
     
 
     D:\Code\Deep-Learning\deep-learning\tv-script-generation\problem_unittests.py in test_build_rnn(build_rnn)
@@ -411,79 +389,125 @@ tests.test_build_rnn(build_rnn)
         230         # Check name
     
 
-    <ipython-input-182-c426d71ed819> in build_rnn(cell, inputs)
-         14 
-         15     r_cell, init_state = get_init_cell(batch_size, rnn_size)
-    ---> 16     r_embed = get_embed(inputs, len(int_to_vocab), embed_dim)
-         17 
-         18     print(r_cell)
+    <ipython-input-53-b461eeaa0ed3> in build_rnn(cell, inputs)
+         12     embed_ = get_embed(inputs, len(int_to_vocab), embed_dim)
+         13 
+    ---> 14     outputs, final_state = tf.nn.dynamic_rnn(cell_, embed_, initial_state=initial_state_)
+         15 
+         16     return outputs, tf.identity(final_state, "final_state")
     
 
-    <ipython-input-181-a1c515d4e9b4> in get_embed(input_data, vocab_size, embed_dim)
-          9 
-         10     embedding = tf.Variable(tf.random_uniform((vocab_size, embed_dim), -1, 1))
-    ---> 11     embed = tf.nn.embedding_lookup(tf.dtypes.cast(embedding, tf.int32), input_data)
-         12 
-         13     return embed
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\util\deprecation.py in new_func(*args, **kwargs)
+        322               'in a future version' if date is None else ('after %s' % date),
+        323               instructions)
+    --> 324       return func(*args, **kwargs)
+        325     return tf_decorator.make_decorator(
+        326         func, new_func, 'deprecated',
     
 
-    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\embedding_ops.py in embedding_lookup(params, ids, partition_strategy, name, validate_indices, max_norm)
-        313       name=name,
-        314       max_norm=max_norm,
-    --> 315       transform_fn=None)
-        316 
-        317 
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn.py in dynamic_rnn(cell, inputs, sequence_length, initial_state, dtype, parallel_iterations, swap_memory, time_major, scope)
+        705         swap_memory=swap_memory,
+        706         sequence_length=sequence_length,
+    --> 707         dtype=dtype)
+        708 
+        709     # Outputs of _dynamic_rnn_loop are always shaped [time, batch, depth].
     
 
-    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\embedding_ops.py in _embedding_lookup_and_transform(params, ids, partition_strategy, name, max_norm, transform_fn)
-        131       with ops.colocate_with(params[0]):
-        132         result = _clip(
-    --> 133             array_ops.gather(params[0], ids, name=name), ids, max_norm)
-        134         if transform_fn:
-        135           result = transform_fn(result)
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn.py in _dynamic_rnn_loop(cell, inputs, initial_state, parallel_iterations, swap_memory, sequence_length, dtype)
+        914       parallel_iterations=parallel_iterations,
+        915       maximum_iterations=time_steps,
+    --> 916       swap_memory=swap_memory)
+        917 
+        918   # Unpack final output if not using output tuples.
     
 
-    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\util\dispatch.py in wrapper(*args, **kwargs)
-        178     """Call target, and fall back on dispatchers if there is a TypeError."""
-        179     try:
-    --> 180       return target(*args, **kwargs)
-        181     except (TypeError, ValueError):
-        182       # Note: convert_to_eager_tensor currently raises a ValueError, not a
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\control_flow_ops.py in while_loop(cond, body, loop_vars, shape_invariants, parallel_iterations, back_prop, swap_memory, name, maximum_iterations, return_same_structure)
+       3499       ops.add_to_collection(ops.GraphKeys.WHILE_CONTEXT, loop_context)
+       3500     result = loop_context.BuildLoop(cond, body, loop_vars, shape_invariants,
+    -> 3501                                     return_same_structure)
+       3502     if maximum_iterations is not None:
+       3503       return result[1]
     
 
-    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\array_ops.py in gather(***failed resolving arguments***)
-       3473     return params.sparse_read(indices, name=name)
-       3474   except AttributeError:
-    -> 3475     return gen_array_ops.gather_v2(params, indices, axis, name=name)
-       3476 
-       3477 
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\control_flow_ops.py in BuildLoop(self, pred, body, loop_vars, shape_invariants, return_same_structure)
+       3010       with ops.get_default_graph()._mutation_lock():  # pylint: disable=protected-access
+       3011         original_body_result, exit_vars = self._BuildLoop(
+    -> 3012             pred, body, original_loop_vars, loop_vars, shape_invariants)
+       3013     finally:
+       3014       self.Exit()
     
 
-    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\gen_array_ops.py in gather_v2(params, indices, axis, batch_dims, name)
-       4834   _, _, _op = _op_def_lib._apply_op_helper(
-       4835         "GatherV2", params=params, indices=indices, axis=axis,
-    -> 4836                     batch_dims=batch_dims, name=name)
-       4837   _result = _op.outputs[:]
-       4838   _inputs_flat = _op.inputs
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\control_flow_ops.py in _BuildLoop(self, pred, body, original_loop_vars, loop_vars, shape_invariants)
+       2935         expand_composites=True)
+       2936     pre_summaries = ops.get_collection(ops.GraphKeys._SUMMARY_COLLECTION)  # pylint: disable=protected-access
+    -> 2937     body_result = body(*packed_vars_for_body)
+       2938     post_summaries = ops.get_collection(ops.GraphKeys._SUMMARY_COLLECTION)  # pylint: disable=protected-access
+       2939     if not nest.is_sequence_or_composite(body_result):
     
 
-    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\framework\op_def_library.py in _apply_op_helper(self, op_type_name, name, **keywords)
-        624               _SatisfiesTypeConstraint(base_type,
-        625                                        _Attr(op_def, input_arg.type_attr),
-    --> 626                                        param_name=input_name)
-        627             attrs[input_arg.type_attr] = attr_value
-        628             inferred_from[input_arg.type_attr] = input_name
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\control_flow_ops.py in <lambda>(i, lv)
+       3454         cond = lambda i, lv: (  # pylint: disable=g-long-lambda
+       3455             math_ops.logical_and(i < maximum_iterations, orig_cond(*lv)))
+    -> 3456         body = lambda i, lv: (i + 1, orig_body(*lv))
+       3457 
+       3458     if executing_eagerly:
     
 
-    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\framework\op_def_library.py in _SatisfiesTypeConstraint(dtype, attr_def, param_name)
-         58           "allowed values: %s" %
-         59           (param_name, dtypes.as_dtype(dtype).name,
-    ---> 60            ", ".join(dtypes.as_dtype(x).name for x in allowed_list)))
-         61 
-         62 
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn.py in _time_step(time, output_ta_t, state)
+        882           skip_conditionals=True)
+        883     else:
+    --> 884       (output, new_state) = call_cell()
+        885 
+        886     # Keras cells always wrap state as list, even if it's a single tensor.
     
 
-    TypeError: Value passed to parameter 'indices' has DataType float32 not in list of allowed values: int32, int64
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn.py in <lambda>()
+        868     if is_keras_rnn_cell and not nest.is_sequence(state):
+        869       state = [state]
+    --> 870     call_cell = lambda: cell(input_t, state)
+        871 
+        872     if sequence_length is not None:
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn_cell_impl.py in __call__(self, inputs, state, scope)
+        246         setattr(self, scope_attrname, scope)
+        247       with scope:
+    --> 248         return super(RNNCell, self).__call__(inputs, state)
+        249 
+        250   def _rnn_get_variable(self, getter, *args, **kwargs):
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\layers\base.py in __call__(self, inputs, *args, **kwargs)
+        535 
+        536       # Actually call layer
+    --> 537       outputs = super(Layer, self).__call__(inputs, *args, **kwargs)
+        538 
+        539     if not context.executing_eagerly():
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\keras\engine\base_layer.py in __call__(self, inputs, *args, **kwargs)
+        632                     outputs = base_layer_utils.mark_as_return(outputs, acd)
+        633                 else:
+    --> 634                   outputs = call_fn(inputs, *args, **kwargs)
+        635 
+        636             except TypeError as e:
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\autograph\impl\api.py in wrapper(*args, **kwargs)
+        147       except Exception as e:  # pylint:disable=broad-except
+        148         if hasattr(e, 'ag_error_metadata'):
+    --> 149           raise e.ag_error_metadata.to_exception(type(e))
+        150         else:
+        151           raise
+    
+
+    ValueError: in converted code:
+    
+        c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn_cell_impl.py:1711 call *
+            raise ValueError(
+    
+        ValueError: Expected state to be a tuple of length 3, but received: Tensor("rnn/while/Identity_3:0", shape=(3, 2, 100, 512), dtype=int32)
+    
 
 
 ### Build the Neural Network
@@ -505,9 +529,14 @@ def build_nn(cell, rnn_size, input_data, vocab_size, embed_dim):
     :param vocab_size: Vocabulary size
     :param embed_dim: Number of embedding dimensions
     :return: Tuple (Logits, FinalState)
-    """
+    """    
+    em = get_embed(input_data, vocab_size, embed_dim)
+    outputs, final_state = build_rnn(cell, input_data)
+    
+    predictions = tf.contrib.layers.fully_connected(outputs[:])
+    
     # TODO: Implement Function
-    return None, None
+    return (logits, final_state)
 
 
 """
@@ -563,20 +592,35 @@ def get_batches(int_text, batch_size, seq_length):
     :param batch_size: The size of batch
     :param seq_length: The length of sequence
     :return: Batches as a Numpy array
-    """
-#     (number of batches, 2, batch size, sequence length)
-    
+    """    
     words_per_batch = batch_size * seq_length
-    num_batches = len(int_text) // words_per_batch
-    
+    num_batches = len(int_text) // words_per_batch   
+   
     int_text = int_text[:num_batches * words_per_batch]
-    print(len(int_text))
-    i_text_as_np = np.asarray(int_text)
     
-    i_text_as_np = i_text_as_np.reshape(batch_size, seq_length)
-    
-    return i_text_as_np
+    batches = np.zeros(shape=(num_batches, 2, batch_size, seq_length), dtype = np.int32)
 
+    for i in range(num_batches):
+        iteration = 0
+        for j in range(i * seq_length, len(int_text), num_batches * seq_length):            
+            chunk_start = j
+                                
+            chunk = int_text[chunk_start:chunk_start + seq_length]
+            
+            chunk_target = None
+            
+            if j + seq_length < len(int_text):
+                chunk_target = int_text[chunk_start + 1:chunk_start + seq_length + 1]
+            else:
+                chunk_target = int_text[chunk_start + 1:chunk_start + seq_length + 1]
+                chunk_target.append(int_text[0])
+        
+            batches[i][0][iteration] = chunk
+            batches[i][1][iteration] = chunk_target        
+            
+            iteration += 1
+    
+    return batches
 
 """
 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
@@ -584,38 +628,8 @@ DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
 tests.test_get_batches(get_batches)
 ```
 
-    4480
+    Tests Passed
     
-
-
-    ---------------------------------------------------------------------------
-
-    ValueError                                Traceback (most recent call last)
-
-    <ipython-input-114-13427be5750c> in <module>
-         24 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
-         25 """
-    ---> 26 tests.test_get_batches(get_batches)
-    
-
-    D:\Code\Deep-Learning\deep-learning\tv-script-generation\problem_unittests.py in test_get_batches(get_batches)
-         77         test_seq_length = 5
-         78         test_int_text = list(range(1000*test_seq_length))
-    ---> 79         batches = get_batches(test_int_text, test_batch_size, test_seq_length)
-         80 
-         81         # Check type
-    
-
-    <ipython-input-114-13427be5750c> in get_batches(int_text, batch_size, seq_length)
-         16     i_text_as_np = np.asarray(int_text)
-         17 
-    ---> 18     i_text_as_np = i_text_as_np.reshape(batch_size, seq_length)
-         19 
-         20     return i_text_as_np
-    
-
-    ValueError: cannot reshape array of size 4480 into shape (128,5)
-
 
 ## Neural Network Training
 ### Hyperparameters
