@@ -574,24 +574,17 @@ with train_graph.as_default():
     train_op = optimizer.apply_gradients(capped_gradients)
 ```
 
-    <tensorflow.python.ops.rnn_cell_impl.MultiRNNCell object at 0x00000203BAFDBF28>
-    512
-    Tensor("input:0", shape=(?, ?), dtype=int32)
-    6780
-    500
-    
-
 
     ---------------------------------------------------------------------------
 
     ValueError                                Traceback (most recent call last)
 
-    <ipython-input-29-82c8fc290bfe> in <module>
-         15     print(vocab_size)
-         16     print(embed_dim)
-    ---> 17     logits, final_state = build_nn(cell, rnn_size, input_text, vocab_size, embed_dim)
-         18 
-         19     # Probabilities for generating words
+    <ipython-input-30-bd6cb88aaa1a> in <module>
+         10     input_data_shape = tf.shape(input_text)
+         11     cell, initial_state = get_init_cell(input_data_shape[0], rnn_size)
+    ---> 12     logits, final_state = build_nn(cell, rnn_size, input_text, vocab_size, embed_dim)
+         13 
+         14     # Probabilities for generating words
     
 
     <ipython-input-25-b2a36e78d0e7> in build_nn(cell, rnn_size, input_data, vocab_size, embed_dim)
