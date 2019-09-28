@@ -301,6 +301,15 @@ DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
 tests.test_get_init_cell(get_init_cell)
 ```
 
+    WARNING:tensorflow:From D:\Code\Deep-Learning\deep-learning\tv-script-generation\problem_unittests.py:185: The name tf.placeholder is deprecated. Please use tf.compat.v1.placeholder instead.
+    
+    WARNING:tensorflow:From <ipython-input-10-20e22e871cb7>:12: BasicLSTMCell.__init__ (from tensorflow.python.ops.rnn_cell_impl) is deprecated and will be removed in a future version.
+    Instructions for updating:
+    This class is equivalent as tf.keras.layers.LSTMCell, and will be replaced by that in Tensorflow 2.0.
+    WARNING:tensorflow:From <ipython-input-10-20e22e871cb7>:15: MultiRNNCell.__init__ (from tensorflow.python.ops.rnn_cell_impl) is deprecated and will be removed in a future version.
+    Instructions for updating:
+    This class is equivalent as tf.keras.layers.StackedRNNCells, and will be replaced by that in Tensorflow 2.0.
+    WARNING:tensorflow:At least two cells provided to MultiRNNCell are the same object and will share weights.
     Tests Passed
     
 
@@ -358,6 +367,15 @@ DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
 tests.test_build_rnn(build_rnn)
 ```
 
+    WARNING:tensorflow:From <ipython-input-12-e5ca2edaa30f>:8: dynamic_rnn (from tensorflow.python.ops.rnn) is deprecated and will be removed in a future version.
+    Instructions for updating:
+    Please use `keras.layers.RNN(cell)`, which is equivalent to this API
+    WARNING:tensorflow:From c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\init_ops.py:1251: calling VarianceScaling.__init__ (from tensorflow.python.ops.init_ops) with dtype is deprecated and will be removed in a future version.
+    Instructions for updating:
+    Call initializer instance with the dtype argument instead of passing it to the constructor
+    WARNING:tensorflow:From c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn_cell_impl.py:738: calling Zeros.__init__ (from tensorflow.python.ops.init_ops) with dtype is deprecated and will be removed in a future version.
+    Instructions for updating:
+    Call initializer instance with the dtype argument instead of passing it to the constructor
     Tests Passed
     
 
@@ -383,10 +401,10 @@ def build_nn(cell, rnn_size, input_data, vocab_size, embed_dim):
     """    
     inputs = get_embed(input_data, vocab_size, embed_dim)
     outputs, final_state = build_rnn(cell, inputs)
-    
-    logits = {}
 
-    return (logits, final_state)
+    logits = tf.contrib.layers.fully_connected(outputs, vocab_size, None)
+
+    return logits, final_state
 
 
 """
@@ -395,27 +413,9 @@ DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
 tests.test_build_nn(build_nn)
 ```
 
-
-    ---------------------------------------------------------------------------
-
-    AttributeError                            Traceback (most recent call last)
-
-    <ipython-input-81-17d5cd7db403> in <module>
-         21 DON'T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE
-         22 """
-    ---> 23 tests.test_build_nn(build_nn)
+    Tensor("fully_connected/BiasAdd:0", shape=(128, 5, 27), dtype=float32)
+    Tests Passed
     
-
-    D:\Code\Deep-Learning\deep-learning\tv-script-generation\problem_unittests.py in test_build_nn(build_nn)
-        262 
-        263         # Check Shape
-    --> 264         assert logits.get_shape().as_list() == test_input_data_shape + [test_vocab_size], \
-        265             'Outputs has wrong shape.  Found shape {}'.format(logits.get_shape())
-        266         assert final_state.get_shape().as_list() == [test_rnn_layer_size, 2, 128, test_rnn_size], \
-    
-
-    AttributeError: 'dict' object has no attribute 'get_shape'
-
 
 ### Batches
 Implement `get_batches` to create batches of input and targets using `int_text`.  The batches should be a Numpy array with the shape `(number of batches, 2, batch size, sequence length)`. Each batch contains two elements:
@@ -573,6 +573,176 @@ with train_graph.as_default():
     capped_gradients = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gradients if grad is not None]
     train_op = optimizer.apply_gradients(capped_gradients)
 ```
+
+    <tensorflow.python.ops.rnn_cell_impl.MultiRNNCell object at 0x00000203BAFDBF28>
+    512
+    Tensor("input:0", shape=(?, ?), dtype=int32)
+    6780
+    500
+    
+
+
+    ---------------------------------------------------------------------------
+
+    ValueError                                Traceback (most recent call last)
+
+    <ipython-input-29-82c8fc290bfe> in <module>
+         15     print(vocab_size)
+         16     print(embed_dim)
+    ---> 17     logits, final_state = build_nn(cell, rnn_size, input_text, vocab_size, embed_dim)
+         18 
+         19     # Probabilities for generating words
+    
+
+    <ipython-input-25-b2a36e78d0e7> in build_nn(cell, rnn_size, input_data, vocab_size, embed_dim)
+         10     """    
+         11     inputs = get_embed(input_data, vocab_size, embed_dim)
+    ---> 12     outputs, final_state = build_rnn(cell, inputs)
+         13 
+         14     logits = tf.contrib.layers.fully_connected(outputs, vocab_size, None)
+    
+
+    <ipython-input-12-e5ca2edaa30f> in build_rnn(cell, inputs)
+          6     :return: Tuple (Outputs, Final State)
+          7     """
+    ----> 8     outputs, final_state = tf.nn.dynamic_rnn(cell, inputs, dtype = tf.float32)
+          9 
+         10     return outputs, tf.identity(final_state, "final_state")
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\util\deprecation.py in new_func(*args, **kwargs)
+        322               'in a future version' if date is None else ('after %s' % date),
+        323               instructions)
+    --> 324       return func(*args, **kwargs)
+        325     return tf_decorator.make_decorator(
+        326         func, new_func, 'deprecated',
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn.py in dynamic_rnn(cell, inputs, sequence_length, initial_state, dtype, parallel_iterations, swap_memory, time_major, scope)
+        705         swap_memory=swap_memory,
+        706         sequence_length=sequence_length,
+    --> 707         dtype=dtype)
+        708 
+        709     # Outputs of _dynamic_rnn_loop are always shaped [time, batch, depth].
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn.py in _dynamic_rnn_loop(cell, inputs, initial_state, parallel_iterations, swap_memory, sequence_length, dtype)
+        914       parallel_iterations=parallel_iterations,
+        915       maximum_iterations=time_steps,
+    --> 916       swap_memory=swap_memory)
+        917 
+        918   # Unpack final output if not using output tuples.
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\control_flow_ops.py in while_loop(cond, body, loop_vars, shape_invariants, parallel_iterations, back_prop, swap_memory, name, maximum_iterations, return_same_structure)
+       3499       ops.add_to_collection(ops.GraphKeys.WHILE_CONTEXT, loop_context)
+       3500     result = loop_context.BuildLoop(cond, body, loop_vars, shape_invariants,
+    -> 3501                                     return_same_structure)
+       3502     if maximum_iterations is not None:
+       3503       return result[1]
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\control_flow_ops.py in BuildLoop(self, pred, body, loop_vars, shape_invariants, return_same_structure)
+       3010       with ops.get_default_graph()._mutation_lock():  # pylint: disable=protected-access
+       3011         original_body_result, exit_vars = self._BuildLoop(
+    -> 3012             pred, body, original_loop_vars, loop_vars, shape_invariants)
+       3013     finally:
+       3014       self.Exit()
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\control_flow_ops.py in _BuildLoop(self, pred, body, original_loop_vars, loop_vars, shape_invariants)
+       2935         expand_composites=True)
+       2936     pre_summaries = ops.get_collection(ops.GraphKeys._SUMMARY_COLLECTION)  # pylint: disable=protected-access
+    -> 2937     body_result = body(*packed_vars_for_body)
+       2938     post_summaries = ops.get_collection(ops.GraphKeys._SUMMARY_COLLECTION)  # pylint: disable=protected-access
+       2939     if not nest.is_sequence_or_composite(body_result):
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\control_flow_ops.py in <lambda>(i, lv)
+       3454         cond = lambda i, lv: (  # pylint: disable=g-long-lambda
+       3455             math_ops.logical_and(i < maximum_iterations, orig_cond(*lv)))
+    -> 3456         body = lambda i, lv: (i + 1, orig_body(*lv))
+       3457 
+       3458     if executing_eagerly:
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn.py in _time_step(time, output_ta_t, state)
+        882           skip_conditionals=True)
+        883     else:
+    --> 884       (output, new_state) = call_cell()
+        885 
+        886     # Keras cells always wrap state as list, even if it's a single tensor.
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn.py in <lambda>()
+        868     if is_keras_rnn_cell and not nest.is_sequence(state):
+        869       state = [state]
+    --> 870     call_cell = lambda: cell(input_t, state)
+        871 
+        872     if sequence_length is not None:
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\ops\rnn_cell_impl.py in __call__(self, inputs, state, scope)
+        246         setattr(self, scope_attrname, scope)
+        247       with scope:
+    --> 248         return super(RNNCell, self).__call__(inputs, state)
+        249 
+        250   def _rnn_get_variable(self, getter, *args, **kwargs):
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\layers\base.py in __call__(self, inputs, *args, **kwargs)
+        535 
+        536       # Actually call layer
+    --> 537       outputs = super(Layer, self).__call__(inputs, *args, **kwargs)
+        538 
+        539     if not context.executing_eagerly():
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\keras\engine\base_layer.py in __call__(self, inputs, *args, **kwargs)
+        632                     outputs = base_layer_utils.mark_as_return(outputs, acd)
+        633                 else:
+    --> 634                   outputs = call_fn(inputs, *args, **kwargs)
+        635 
+        636             except TypeError as e:
+    
+
+    c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python\autograph\impl\api.py in wrapper(*args, **kwargs)
+        147       except Exception as e:  # pylint:disable=broad-except
+        148         if hasattr(e, 'ag_error_metadata'):
+    --> 149           raise e.ag_error_metadata.to_exception(type(e))
+        150         else:
+        151           raise
+    
+
+    ValueError: in converted code:
+        relative to c:\programdata\anaconda3\envs\tensorflow-gpu\lib\site-packages\tensorflow\python:
+    
+        ops\rnn_cell_impl.py:1719 call *
+            cur_inp, new_state = cell(cur_inp, cur_state)
+        ops\rnn_cell_impl.py:1159 __call__
+            inputs, state, cell_call_fn=self.cell.__call__, scope=scope)
+        ops\rnn_cell_impl.py:766 call *
+            gate_inputs = math_ops.matmul(
+        util\dispatch.py:180 wrapper
+            return target(*args, **kwargs)
+        ops\math_ops.py:2647 matmul
+            a, b, transpose_a=transpose_a, transpose_b=transpose_b, name=name)
+        ops\gen_math_ops.py:6295 mat_mul
+            name=name)
+        framework\op_def_library.py:788 _apply_op_helper
+            op_def=op_def)
+        util\deprecation.py:507 new_func
+            return func(*args, **kwargs)
+        framework\ops.py:3616 create_op
+            op_def=op_def)
+        framework\ops.py:2027 __init__
+            control_input_ops)
+        framework\ops.py:1867 _create_c_op
+            raise ValueError(str(e))
+    
+        ValueError: Dimensions must be equal, but are 1024 and 1012 for 'rnn/while/rnn/multi_rnn_cell/cell_0/basic_lstm_cell/MatMul_1' (op: 'MatMul') with input shapes: [?,1024], [1012,2048].
+    
+
 
 ## Train
 Train the neural network on the preprocessed data.  If you have a hard time getting a good loss, check the [forums](https://discussions.udacity.com/) to see if anyone is having the same problem.
